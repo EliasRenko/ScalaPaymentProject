@@ -6,47 +6,55 @@ object PaymentParticipant {
 
   case class Status()
 
-  def props(name:String): Props = Props(new PaymentParticipant(name))
+  case class StopPayment()
+
+  def props(name:String, balance:Long): Props = Props(new PaymentParticipant(name, balance))
 }
 
-class PaymentParticipant(name:String) extends Actor with ActorLogging {
+class PaymentParticipant(name:String, balance:Long) extends Actor with ActorLogging {
+
+  var _balance:Long = balance
 
   override def receive: Receive = {
 
     case PaymentParticipant.GetStatus => sender() ! PaymentParticipant.Status()
 
-    case PaymentChecker.Payment(sign, value) => {
+    case PaymentChecker.Payment("-", value, participant) => {
 
-      var b = Main.balance
-
-      sign match {
-
-        case "+" => b = b + value
-
-        case "-" => b = b - value
-
-        case _ => throw new Exception("Invalid sign detected!")
-      }
+      val b = _balance - value
 
       if (b > 0) {
 
-        Main.balance = b
+        _balance = b
 
-        log.info("Balance: {}", Main.balance.toString)
+        participant ! PaymentChecker.Payment("+", value, self)
+
+        log.info("Balance: {}", _balance.toString)
+
+        //println(name + " - " + _balance)
       }
       else {
 
-        //println("Insufficient funds!")
-
-        log.warning("Insufficient funds: {}", name)
+        participant ! PaymentParticipant.StopPayment()
       }
+    }
 
-      //println("Balance: " + Main.balance.toString)
+    case PaymentChecker.Payment("+", value, participant) => {
+
+      _balance += value
+
+      //println(name + " + " + _balance)
+    }
+
+    case PaymentParticipant.StopPayment() => {
+
+      log.warning("Insufficient funds: {}", name)
+
+      //println("Insufficient funds")
     }
 
     case _=> {
 
-      println("Participant response!")
     }
   }
 }

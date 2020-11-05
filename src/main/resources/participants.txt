@@ -1,0 +1,6 @@
+person1 -> person2: 100
+person1 -> person3: 100
+person1 -> person4: 100
+person1 -> person5: 500
+person1 -> person6: 500
+person1 -> person7: 100

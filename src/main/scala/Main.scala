@@ -9,8 +9,6 @@ object Main extends App {
 
   var balance:Long = _configuration.getBalance()
 
-  val mask:String = _configuration.getMask()
-
   private val _paymentChecker:ActorRef = _createPaymentChecker()
 
   private val _paymentReader:ActorRef = _createPaymentReader(_configuration.getData(), _paymentChecker)

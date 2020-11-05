@@ -11,7 +11,9 @@ class LogIncorrectPayment extends Actor with ActorLogging {
 
     case PaymentReader.CheckPayment(i) => {
 
-      log.warning("Invalid name: {}", i(0))
+      log.warning("Invalid line: {}", i(0))
+
+      //println("ERROR!")
     }
   }
 
