@@ -1,3 +1,0 @@
-person1 - 500
-person2 + 200
-person3 - 500
