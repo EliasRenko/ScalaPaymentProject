@@ -1,10 +1,9 @@
 import java.nio.file.Paths
 
-import Main._system
-import akka.{Done, NotUsed}
+import Main.system
+import akka.Done
 import akka.actor.{Actor, ActorLogging, ActorRef, Props}
-import akka.stream.{ClosedShape, FlowShape, IOResult}
-import akka.stream.scaladsl.{Balance, FileIO, Flow, Framing, GraphDSL, Merge, Partition, Sink}
+import akka.stream.scaladsl.{FileIO, Framing}
 import akka.util.ByteString
 
 import scala.concurrent.Future
@@ -18,27 +17,16 @@ object PaymentReader {
 
 class PaymentReader(source:String, checkerRef:ActorRef) extends Actor with ActorLogging {
 
-  //println("Reader initiated!")
-
-  var _participants:Map[String, ActorRef] = Map()
-
-  val _sourceFile = Paths.get("src/main/resources/" + source)
-
-  val count: Sink[String, Future[Any]] = Sink.fold[Any, String](0) {
-
-    case v => checkerRef ! PaymentReader.CheckPayment(v._2)
-
-    case _=> println("_")
-  }
-
-  val _flow_1:Flow[ByteString, ByteString, NotUsed] = Framing.delimiter(ByteString("\n"), 256, allowTruncation = true)
-
-  val foreach:Future[IOResult] = FileIO.fromPath(_sourceFile)
-    .via(_flow_1.map(_.utf8String))
-    .to(count).run()
+  val sourceFile = Paths.get(source)
 
   override def receive: Receive = {
 
-    _=> println("Reader response!")
+    case Main.StartReading => {
+
+      val checkLines:Future[Done] = FileIO.fromPath(sourceFile).via(Framing.delimiter(ByteString("\r\n"), 256, allowTruncation = true).map(_.utf8String))
+        .runForeach(i => checkerRef ! PaymentReader.CheckPayment(i))
+    }
+
+    case _=> log.warning("Invalid message from:" + sender())
   }
 }

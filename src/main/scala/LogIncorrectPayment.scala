@@ -1,4 +1,4 @@
-import akka.actor.{Actor, ActorLogging, ActorRef, Props}
+import akka.actor.{Actor, ActorLogging, Props}
 
 object LogIncorrectPayment {
 
@@ -11,16 +11,12 @@ class LogIncorrectPayment extends Actor with ActorLogging {
 
     case PaymentReader.CheckPayment(i) => {
 
-      log.warning("Invalid line: {}", i(0))
-
-      //println("ERROR!")
+      log.error("Error, invalid line: + i ")
     }
-  }
 
-  // ** Defs.
+    case _=> {
 
-  protected def _createPaymentParticipant(): ActorRef = {
-
-    context.actorOf(LogIncorrectPayment.props())
+      log.warning("Invalid message from:" + sender())
+    }
   }
 }

@@ -1,60 +1,63 @@
+import PaymentChecker.Payment
 import akka.actor.{Actor, ActorLogging, Props}
 
 object PaymentParticipant {
-
-  case object GetStatus
-
-  case class Status()
 
   case class StopPayment()
 
   def props(name:String, balance:Long): Props = Props(new PaymentParticipant(name, balance))
 }
 
-class PaymentParticipant(name:String, balance:Long) extends Actor with ActorLogging {
-
-  var _balance:Long = balance
+class PaymentParticipant(name:String, var balance:Long) extends Actor with ActorLogging {
 
   override def receive: Receive = {
 
-    case PaymentParticipant.GetStatus => sender() ! PaymentParticipant.Status()
+    case Payment(paymentSign, value, participant) => {
 
-    case PaymentChecker.Payment("-", value, participant) => {
+      paymentSign.sign match  {
 
-      val b = _balance - value
+        case "+"=> {
 
-      if (b > 0) {
+          balance += value
 
-        _balance = b
+          println(name + " + " + balance)
+        }
 
-        participant ! PaymentChecker.Payment("+", value, self)
+        case "-"=> {
 
-        log.info("Balance: {}", _balance.toString)
+          val b = balance - value
 
-        //println(name + " - " + _balance)
+          if (b > 0) {
+
+            balance = b
+
+            participant ! PaymentChecker.Payment(PaymentChecker.PaymentSign("+"), value, self)
+
+            log.info("Balance: " + balance.toString)
+
+            println(name + " - " + balance)
+          }
+          else {
+
+            participant ! PaymentParticipant.StopPayment()
+          }
+        }
+
+        case _=> {
+
+          log.warning("Error, invalid payment sign!")
+        }
       }
-      else {
-
-        participant ! PaymentParticipant.StopPayment()
-      }
-    }
-
-    case PaymentChecker.Payment("+", value, participant) => {
-
-      _balance += value
-
-      //println(name + " + " + _balance)
     }
 
     case PaymentParticipant.StopPayment() => {
 
-      log.warning("Insufficient funds: {}", name)
-
-      //println("Insufficient funds")
+      log.warning("Insufficient funds at: " + name)
     }
 
     case _=> {
 
+      log.warning("Invalid message from:" + sender())
     }
   }
 }

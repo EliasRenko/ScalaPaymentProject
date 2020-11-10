@@ -3,25 +3,28 @@ import akka.actor.{ActorRef, ActorSystem}
 
 object Main extends App {
 
-  implicit val _system: ActorSystem = ActorSystem("default")
+  implicit val system: ActorSystem = ActorSystem("default")
 
-  private val _configuration:Configuration = new Configuration()
+  val configuration:Configuration = new Configuration()
 
-  var balance:Long = _configuration.getBalance()
+  var balance:Long = configuration.balance
 
-  private val _paymentChecker:ActorRef = _createPaymentChecker()
+  private val paymentChecker:ActorRef = createPaymentChecker()
 
-  private val _paymentReader:ActorRef = _createPaymentReader(_configuration.getData(), _paymentChecker)
+  private val paymentReader:ActorRef = createPaymentReader(configuration.sourceFile, paymentChecker)
 
-  // ** Defs.
+  paymentReader ! StartReading
 
-  protected def _createPaymentChecker(): ActorRef = {
 
-    _system.actorOf(PaymentChecker.props())
+  case object StartReading
+
+  protected def createPaymentChecker(): ActorRef = {
+
+    system.actorOf(PaymentChecker.props())
   }
 
-  protected def _createPaymentReader(source:String, checkerRef:ActorRef): ActorRef = {
+  protected def createPaymentReader(source:String, checkerRef:ActorRef): ActorRef = {
 
-    _system.actorOf(PaymentReader.props(source, checkerRef))
+    system.actorOf(PaymentReader.props(source, checkerRef))
   }
 }
