@@ -1,4 +1,5 @@
-import java.nio.file.Paths
+import java.io.File
+import java.nio.file.{Path, Paths}
 
 import Main.system
 import akka.Done
@@ -17,16 +18,35 @@ object PaymentReader {
 
 class PaymentReader(source:String, checkerRef:ActorRef) extends Actor with ActorLogging {
 
-  val sourceFile = Paths.get(source)
+  val sourceFile:Path = Paths.get(source)
+
+  val sourceFiles:List[File] = getSourceFiles(source)
 
   override def receive: Receive = {
 
     case Main.StartReading => {
 
-      val checkLines:Future[Done] = FileIO.fromPath(sourceFile).via(Framing.delimiter(ByteString("\r\n"), 256, allowTruncation = true).map(_.utf8String))
-        .runForeach(i => checkerRef ! PaymentReader.CheckPayment(i))
+      for (file <- sourceFiles) {
+
+        val checkLines:Future[Done] = FileIO.fromPath(file.toPath).via(Framing.delimiter(ByteString("\r\n"), 256, allowTruncation = true).map(_.utf8String))
+          .runForeach(i => checkerRef ! PaymentReader.CheckPayment(i))
+      }
     }
 
     case _=> log.warning("Invalid message from:" + sender())
+  }
+
+  private def getSourceFiles(source:String):List[File] = {
+
+    val sourceDirectory = new File(source)
+
+    if (sourceDirectory.exists && sourceDirectory.isDirectory) {
+
+      sourceDirectory.listFiles.filter(_.isFile).toList
+    }
+    else {
+
+      List[File]()
+    }
   }
 }

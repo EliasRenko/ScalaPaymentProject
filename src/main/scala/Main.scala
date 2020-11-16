@@ -7,8 +7,6 @@ object Main extends App {
 
   val configuration:Configuration = new Configuration()
 
-  var balance:Long = configuration.balance
-
   private val paymentChecker:ActorRef = createPaymentChecker()
 
   private val paymentReader:ActorRef = createPaymentReader(configuration.sourceFile, paymentChecker)

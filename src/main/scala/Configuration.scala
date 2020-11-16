@@ -1,12 +1,10 @@
-import com.typesafe.config.ConfigFactory
+import Main.system
 
 class Configuration() {
 
-  private val _config = ConfigFactory.load("application.conf").getConfig("scalaPaymentProject")
+  val balance:Long = system.settings.config.getLong("scalaPaymentProject.balance")
 
-  val balance:Long = _config.getLong("balance")
+  val sourceFile:String = system.settings.config.getString("scalaPaymentProject.sourceDirectory")
 
-  val sourceFile:String = _config.getString("sourceFile")
-
-  val mask:String = _config.getString("mask")
+  val mask:String = system.settings.config.getString("scalaPaymentProject.mask")
 }

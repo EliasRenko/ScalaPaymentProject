@@ -16,20 +16,18 @@ class PaymentParticipant(name:String, var balance:Long) extends Actor with Actor
 
       paymentSign.sign match  {
 
-        case "+"=> {
+        case "+" => {
 
           balance += value
 
           println(name + " + " + balance)
         }
 
-        case "-"=> {
+        case "-" => {
 
           val b = balance - value
 
-          if (b > 0) {
-
-            balance = b
+          if (checkBalance(value)) {
 
             participant ! PaymentChecker.Payment(PaymentChecker.PaymentSign("+"), value, self)
 
@@ -39,7 +37,7 @@ class PaymentParticipant(name:String, var balance:Long) extends Actor with Actor
           }
           else {
 
-            participant ! PaymentParticipant.StopPayment()
+            log.warning("Insufficient funds at: " + name)
           }
         }
 
@@ -50,14 +48,23 @@ class PaymentParticipant(name:String, var balance:Long) extends Actor with Actor
       }
     }
 
-    case PaymentParticipant.StopPayment() => {
-
-      log.warning("Insufficient funds at: " + name)
-    }
-
     case _=> {
 
       log.warning("Invalid message from:" + sender())
     }
+  }
+
+  protected def checkBalance(value:Long):Boolean = {
+
+    val finalBalance = balance - value
+
+    if (finalBalance > 0) {
+
+      balance = finalBalance
+
+      return true
+    }
+
+    false
   }
 }

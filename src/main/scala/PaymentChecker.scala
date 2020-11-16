@@ -29,17 +29,17 @@ class PaymentChecker extends Actor with ActorLogging {
 
         val pattern(value1, value2, value3) = i
 
-        getOrCreate(value1)
+        val participant1:ActorRef = getOrCreate(value1)
 
-        getOrCreate(value2)
+        val participant2:ActorRef  = getOrCreate(value2)
 
-        val participant:ActorRef = participants(value1)
-
-        participant ! PaymentChecker.Payment(PaymentChecker.PaymentSign("-"), value3.toLong, participants(value2))
+        participant1 ! PaymentChecker.Payment(PaymentChecker.PaymentSign("-"), value3.toLong, participant2)
       }
       else {
 
         logIncorrectPayment ! PaymentReader.CheckPayment(i)
+
+        println("Incorrect mask")
       }
     }
 
@@ -59,11 +59,13 @@ class PaymentChecker extends Actor with ActorLogging {
     context.actorOf(LogIncorrectPayment.props())
   }
 
-  private def getOrCreate(name:String):Unit = {
+  private def getOrCreate(name:String):ActorRef = {
 
     if (!participants.contains(name)) {
 
-      participants += name -> createPaymentParticipant(name, Main.balance)
+      participants += name -> createPaymentParticipant(name, Main.configuration.balance)
     }
+
+    participants(name)
   }
 }
