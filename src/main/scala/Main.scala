@@ -1,4 +1,3 @@
-
 import akka.actor.{ActorRef, ActorSystem}
 
 object Main extends App {
@@ -12,7 +11,6 @@ object Main extends App {
   private val paymentReader:ActorRef = createPaymentReader(configuration.sourceFile, paymentChecker)
 
   paymentReader ! StartReading
-
 
   case object StartReading
 

@@ -19,9 +19,13 @@ class PaymentChecker extends Actor with ActorLogging {
 
   private val mask:String = Main.configuration.mask
 
+  private val producer:Producer = new Producer()
+
   override def receive: Receive = {
 
     case PaymentReader.CheckPayment(i) => {
+
+      producer.createPaymentRecord(null, i)
 
       val pattern:Regex = mask.r
 
