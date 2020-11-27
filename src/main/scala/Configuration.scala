@@ -7,4 +7,6 @@ class Configuration() {
   val sourceFile:String = system.settings.config.getString("scalaPaymentProject.sourceDirectory")
 
   val mask:String = system.settings.config.getString("scalaPaymentProject.mask")
+
+  val localHost:String = system.settings.config.getString("scalaPaymentProject.localHost")
 }
