@@ -17,7 +17,8 @@ libraryDependencies ++= Seq(
   "com.typesafe.akka" %% "akka-actor-typed" % akkaVersion,
   "com.typesafe.akka" %% "akka-actor-testkit-typed" % akkaVersion % Test,
   "com.typesafe.akka" %% "akka-stream" % akkaVersion,
-  "com.typesafe.akka" %% "akka-stream-kafka" % kafkaVersion
+  "com.typesafe.akka" %% "akka-stream-kafka" % kafkaVersion,
+  "com.typesafe.play" %% "play-json" % "2.9.1"
 )
 
 

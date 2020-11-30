@@ -27,10 +27,6 @@ class PaymentChecker extends Actor with ActorLogging {
 
     case PaymentReader.CheckPayment(i) => {
 
-      //producer.createPaymentRecord(null, i)
-
-      consumer.loadPaymentRecords("key")
-
       val pattern:Regex = mask.r
 
       if (pattern.matches(i)) {
@@ -47,7 +43,7 @@ class PaymentChecker extends Actor with ActorLogging {
 
         logIncorrectPayment ! PaymentReader.CheckPayment(i)
 
-        println("Incorrect mask")
+        //println("Incorrect mask")
       }
     }
 

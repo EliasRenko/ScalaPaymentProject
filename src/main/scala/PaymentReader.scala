@@ -11,6 +11,7 @@ import akka.stream.scaladsl.{FileIO, Framing}
 import akka.util.ByteString
 import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.common.serialization.{ByteArrayDeserializer, StringDeserializer}
+import play.api.libs.json.Json
 
 import scala.concurrent.Future
 
@@ -27,11 +28,11 @@ class PaymentReader(source:String, checkerRef:ActorRef) extends Actor with Actor
 
   // ** val sourceFiles:List[File] = getSourceFiles(source)
 
-  private val consumerConfig = system.settings.config.getConfig("akka.kafka.consumer")
+  private val consumerConfig = Main.configuration.kafkaConsumerConfig
 
   private val consumerSettings = ConsumerSettings(consumerConfig, new StringDeserializer, new ByteArrayDeserializer)
-    .withBootstrapServers(Main.configuration.localHost)
-    .withGroupId("consumer_group_1")
+    .withBootstrapServers(Main.configuration.kafkaHost + ":" + Main.configuration.kafkaPort)
+    .withGroupId(Main.configuration.transactionsGroup)
     .withProperty(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest")
 
   override def receive: Receive = {
@@ -48,9 +49,15 @@ class PaymentReader(source:String, checkerRef:ActorRef) extends Actor with Actor
 
       // ** Read kafka topic.
 
-      val transactions:Future[Done] = Consumer
+      /*val transactions:Future[Done] = Consumer
         .plainSource(consumerSettings, Subscriptions.topics("transactions"))
-        .runForeach(i => checkTransaction(i.value()))
+        .runForeach(i => checkTransaction(i.value()))*/
+
+      // ** Read kafka json topic.
+
+      val transactions:Future[Done] = Consumer
+        .plainSource(consumerSettings, Subscriptions.topics(Main.configuration.transactionsTopic))
+        .runForeach(i => checkTransactionJson(i.value()))
     }
 
     case _=> log.warning("Invalid message from:" + sender())
@@ -61,6 +68,15 @@ class PaymentReader(source:String, checkerRef:ActorRef) extends Actor with Actor
     val line:String = new String(data, StandardCharsets.UTF_8)
 
     checkerRef ! PaymentReader.CheckPayment(line)
+  }
+
+  private def checkTransactionJson(data:Array[Byte]): Unit = {
+
+    val json = Json.parse(new String(data, StandardCharsets.UTF_8))
+
+    val transactions = (json \ "transactions").as[List[Map[String, String]]]
+
+    transactions.map(_("transaction")).foreach(i => checkerRef ! PaymentReader.CheckPayment(i))
   }
 
   private def getSourceFiles(source:String):List[File] = {
