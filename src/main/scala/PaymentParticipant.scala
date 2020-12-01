@@ -20,7 +20,7 @@ class PaymentParticipant(name:String, var balance:Long) extends Actor with Actor
 
           balance += value
 
-          //println(name + " + " + balance)
+          println(name + " + " + balance)
         }
 
         case "-" => {
@@ -33,7 +33,7 @@ class PaymentParticipant(name:String, var balance:Long) extends Actor with Actor
 
             log.info("Balance: " + balance.toString)
 
-            //println(name + " - " + balance)
+            println(name + " - " + balance)
           }
           else {
 

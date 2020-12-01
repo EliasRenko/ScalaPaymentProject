@@ -8,7 +8,9 @@ object Main extends App {
 
   private val paymentChecker:ActorRef = createPaymentChecker()
 
-  private val paymentReader:ActorRef = createPaymentReader(configuration.sourceFile, paymentChecker)
+  //private val paymentReader:ActorRef = createPaymentReader(configuration.sourceFile, paymentChecker)
+
+  private val paymentReader:ActorRef = createPaymentReaderKafkaJson(paymentChecker)
 
   paymentReader ! StartReading
 
@@ -22,5 +24,10 @@ object Main extends App {
   protected def createPaymentReader(source:String, checkerRef:ActorRef): ActorRef = {
 
     system.actorOf(PaymentReader.props(source, checkerRef))
+  }
+
+  protected def createPaymentReaderKafkaJson(checkerRef:ActorRef): ActorRef = {
+
+    system.actorOf(PaymentReaderKafkaJson.props(checkerRef))
   }
 }
