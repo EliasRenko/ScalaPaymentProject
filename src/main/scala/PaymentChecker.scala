@@ -19,10 +19,6 @@ class PaymentChecker extends Actor with ActorLogging {
 
   private val mask:String = Main.configuration.mask
 
-  /** Debug **/ //private val producer:Producer = new Producer()
-
-  /** Debug **/ private val consumer:Consumer = new Consumer()
-
   override def receive: Receive = {
 
     case PaymentReader.CheckPayment(i) => {
@@ -45,6 +41,15 @@ class PaymentChecker extends Actor with ActorLogging {
 
         //println("Incorrect mask")
       }
+    }
+
+    case PaymentReaderKafkaJson.CheckPaymentJson(b, s, a) => {
+
+      val participant1:ActorRef = getOrCreate(b)
+
+      val participant2:ActorRef = getOrCreate(s)
+
+      participant1 ! PaymentChecker.Payment(PaymentChecker.PaymentSign("-"), a, participant2)
     }
 
     case _=> {

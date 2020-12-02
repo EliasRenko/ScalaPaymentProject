@@ -12,7 +12,7 @@ import scala.concurrent.Future
 
 object PaymentReaderKafka {
 
-  case class CheckPayment(payment:String)
+  case class CheckPaymentJson()
 
   def props(checkerRef:ActorRef): Props = Props(new PaymentReaderKafka(checkerRef))
 }

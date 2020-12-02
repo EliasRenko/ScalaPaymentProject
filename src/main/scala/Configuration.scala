@@ -4,9 +4,11 @@ class Configuration() {
 
   val balance:Long = system.settings.config.getLong("scalaPaymentProject.balance")
 
-  val sourceFile:String = system.settings.config.getString("scalaPaymentProject.sourceDirectory")
+  val sourceDir:String = system.settings.config.getString("scalaPaymentProject.sourceDirectory")
 
   val mask:String = system.settings.config.getString("scalaPaymentProject.mask")
+
+  val kafkaProducerConfig = system.settings.config.getConfig("akka.kafka.producer")
 
   val kafkaConsumerConfig = system.settings.config.getConfig("akka.kafka.consumer")
 

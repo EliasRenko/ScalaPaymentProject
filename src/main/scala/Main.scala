@@ -1,4 +1,10 @@
+import java.io.File
+
+import akka.Done
 import akka.actor.{ActorRef, ActorSystem}
+import akka.stream.scaladsl.FileIO
+
+import scala.concurrent.Future
 
 object Main extends App {
 
@@ -11,6 +17,8 @@ object Main extends App {
   //private val paymentReader:ActorRef = createPaymentReader(configuration.sourceFile, paymentChecker)
 
   private val paymentReader:ActorRef = createPaymentReaderKafkaJson(paymentChecker)
+
+  createTransactionRecord()
 
   paymentReader ! StartReading
 
@@ -29,5 +37,32 @@ object Main extends App {
   protected def createPaymentReaderKafkaJson(checkerRef:ActorRef): ActorRef = {
 
     system.actorOf(PaymentReaderKafkaJson.props(checkerRef))
+  }
+
+  protected def createTransactionRecord():Unit = {
+
+    val producer:Producer = new Producer()
+    
+    val sourceFiles:List[File] = getSourceFiles(Main.configuration.sourceDir)
+
+    for (file <- sourceFiles) {
+
+        val checkFiles:Future[Done] = FileIO.fromPath(file.toPath).map(_.utf8String)
+          .runForeach(i => producer.createTransactionRecord(null, i))
+      }
+  }
+
+  private def getSourceFiles(source:String):List[File] = {
+
+    val sourceDirectory = new File(source)
+
+    if (sourceDirectory.exists && sourceDirectory.isDirectory) {
+
+      sourceDirectory.listFiles.filter(_.isFile).toList
+    }
+    else {
+
+      List[File]()
+    }
   }
 }

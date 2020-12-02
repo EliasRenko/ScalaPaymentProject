@@ -1,4 +1,0 @@
-person11 -> person12: 100
-person11 -> person13: 100
-person11 -> person14: 100
-person11 -> person15: 500
