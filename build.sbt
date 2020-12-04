@@ -17,8 +17,11 @@ libraryDependencies ++= Seq(
   "com.typesafe.akka" %% "akka-actor-typed" % akkaVersion,
   "com.typesafe.akka" %% "akka-actor-testkit-typed" % akkaVersion % Test,
   "com.typesafe.akka" %% "akka-stream" % akkaVersion,
+  "com.typesafe.akka" %% "akka-discovery" % akkaVersion,
   "com.typesafe.akka" %% "akka-stream-kafka" % kafkaVersion,
-  "com.typesafe.play" %% "play-json" % "2.9.1"
+  "com.typesafe.akka" %% "akka-http-spray-json" % "10.2.1",
+  "com.lightbend.akka" %% "akka-stream-alpakka-cassandra" % "2.0.2",
+  "com.datastax.cassandra" % "cassandra-driver-core" % "4.0.0" pomOnly(),
 )
 
 

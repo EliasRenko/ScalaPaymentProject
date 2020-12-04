@@ -18,6 +18,8 @@ object Main extends App {
 
   private val paymentReader:ActorRef = createPaymentReaderKafkaJson(paymentChecker)
 
+  //private val paymentReader:ActorRef = createPaymentReaderCassandra(paymentChecker)
+
   createTransactionRecord()
 
   paymentReader ! StartReading
@@ -39,10 +41,15 @@ object Main extends App {
     system.actorOf(PaymentReaderKafkaJson.props(checkerRef))
   }
 
+  protected def createPaymentReaderCassandra(checkerRef:ActorRef): ActorRef = {
+
+    system.actorOf(PaymentReaderCassandra.props(checkerRef))
+  }
+
   protected def createTransactionRecord():Unit = {
 
     val producer:Producer = new Producer()
-    
+
     val sourceFiles:List[File] = getSourceFiles(Main.configuration.sourceDir)
 
     for (file <- sourceFiles) {
