@@ -18,7 +18,7 @@ object Main extends App {
 
   private val paymentReader:ActorRef = createPaymentReaderKafkaJson(paymentChecker)
 
-  //private val paymentReader:ActorRef = createPaymentReaderCassandra(paymentChecker)
+  //private val paymentReader:ActorRef = createPaymentReaderCassandra(configuration.sourceDir, paymentChecker)
 
   createTransactionRecord()
 
@@ -41,9 +41,9 @@ object Main extends App {
     system.actorOf(PaymentReaderKafkaJson.props(checkerRef))
   }
 
-  protected def createPaymentReaderCassandra(checkerRef:ActorRef): ActorRef = {
+  protected def createPaymentReaderCassandra(directory:String, checkerRef:ActorRef): ActorRef = {
 
-    system.actorOf(PaymentReaderCassandra.props(checkerRef))
+    system.actorOf(PaymentReaderCassandra.props(directory, checkerRef))
   }
 
   protected def createTransactionRecord():Unit = {

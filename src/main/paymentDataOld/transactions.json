@@ -1,0 +1,26 @@
+{
+    "transactions": [
+
+        {
+            "name1": "person1",
+
+            "name2": "person2",
+
+            "value": 100
+        },
+        {
+            "name1": "person1",
+
+            "name2": "person3",
+
+            "value": 100
+        },
+        {
+            "name1": "person1",
+
+            "name2": "person4",
+
+            "value": 100
+        }
+    ]
+}

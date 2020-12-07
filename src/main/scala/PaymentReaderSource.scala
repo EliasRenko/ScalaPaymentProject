@@ -15,7 +15,7 @@ object PaymentReaderSource {
   def props(source:String, checkerRef:ActorRef): Props = Props(new PaymentReader(source, checkerRef))
 }
 
-class PaymentReaderSource (source:String, checkerRef:ActorRef) extends Actor with ActorLogging {
+class PaymentReaderSource(source:String, checkerRef:ActorRef) extends Actor with ActorLogging {
 
   val sourceFiles:List[File] = getSourceFiles(source)
 
