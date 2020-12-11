@@ -7,16 +7,16 @@ import akka.Done
 import akka.actor.{Actor, ActorLogging, ActorRef, Props}
 import akka.kafka.scaladsl.Consumer
 import akka.kafka.{ConsumerSettings, Subscriptions}
-import akka.stream.alpakka.cassandra.{CassandraSessionSettings, CassandraWriteSettings}
-import akka.stream.alpakka.cassandra.scaladsl.{CassandraFlow, CassandraSession, CassandraSessionRegistry, CassandraSource}
-import akka.stream.scaladsl.{Sink, Source}
-import com.datastax.oss.driver.api.core.cql.{BoundStatement, PreparedStatement}
+import akka.pattern.ask
+import akka.util.Timeout
 import org.apache.kafka.clients.consumer.ConsumerConfig
 import org.apache.kafka.common.serialization.{ByteArrayDeserializer, StringDeserializer}
 import spray.json.DefaultJsonProtocol._
 import spray.json._
 
 import scala.concurrent.Future
+import scala.concurrent.duration.DurationInt
+import scala.language.postfixOps
 import scala.util.{Failure, Success}
 
 object PaymentReaderKafkaJson {
@@ -25,42 +25,43 @@ object PaymentReaderKafkaJson {
 
   case class CheckPaymentJson(buyer: String, seller: String, value: Long)
 
-  def props(checkerRef:ActorRef): Props = Props(new PaymentReaderKafkaJson(checkerRef))
+  def props(checkerRef:ActorRef, configuration:Configuration): Props = Props(new PaymentReaderKafkaJson(checkerRef, configuration))
 }
 
-class PaymentReaderKafkaJson(checkerRef:ActorRef) extends Actor with ActorLogging {
+class PaymentReaderKafkaJson(checkerRef:ActorRef, configuration:Configuration) extends Actor with ActorLogging {
 
   private val consumerConfig = Main.configuration.kafkaConsumerConfig
 
-  private val sessionSettings = CassandraSessionSettings()
-
-  implicit val cassandraSession: CassandraSession =
-    CassandraSessionRegistry.get(Main.system).sessionFor(sessionSettings)
-
   private val consumerSettings = ConsumerSettings(consumerConfig, new StringDeserializer, new ByteArrayDeserializer)
-    .withBootstrapServers(Main.configuration.kafkaHost + ":" + Main.configuration.kafkaPort)
-    .withGroupId(Main.configuration.transactionsGroup)
-    .withProperty(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest")
+    .withBootstrapServers(configuration.kafkaHost + ":" + configuration.kafkaPort)
+    .withGroupId(configuration.transactionsGroup)
+    //.withProperty(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest")
 
   override def receive: Receive = {
 
     case Main.StartReading => {
 
-      val keyspace: Unit =
-        CassandraSource("use test_keyspace").run().onComplete {
+      implicit val timeout = Timeout(10 seconds)
 
-          case Success(s) => {
+      val future:Future[Any] = checkerRef ? PaymentChecker.LoadParticipants
 
-            val transactions:Future[Done] = Consumer
-              .plainSource(consumerSettings, Subscriptions.topics(Main.configuration.transactionsTopic))
-              .runForeach(i => checkTransaction(i.value()))
-          }
+      future.onComplete {
 
-          case Failure(f) => println("Cannot find keyspace: " + f.toString())
+        case Success(result) => {
+
+          val transactions:Future[Done] = Consumer
+            .plainSource(consumerSettings, Subscriptions.topics(configuration.transactionsTopic))
+            .runForeach(i => checkTransaction(i.value()))
         }
+
+        case Failure(failure) => {
+
+          log.error("Cannot load existing participants: " + failure)
+        }
+      }
     }
 
-    case _=> log.warning("Invalid message from:" + sender())
+    case _=> log.warning("Invalid message from: " + sender())
   }
 
   private def checkTransaction(data:Array[Byte]):Unit = {
@@ -80,28 +81,5 @@ class PaymentReaderKafkaJson(checkerRef:ActorRef) extends Actor with ActorLoggin
       checkerRef ! CheckPaymentJson(i.name1, i.name2, i.value)
 
     })
-
-    saveRecords(jsonAst.transactions)
-  }
-
-  private def saveRecords(transactions:Seq[Transaction]):Unit = {
-
-    val statementBinder: (Transaction, PreparedStatement) => BoundStatement =
-      (transaction, preparedStatement) => preparedStatement.bind(transaction.name1, transaction.name2, Float.box(transaction.value.toFloat))
-
-    val write: Future[Seq[Transaction]] = Source(transactions)
-      .via(
-        CassandraFlow.create(CassandraWriteSettings.defaults,
-          "INSERT INTO transactions(name1, name2, value, id) VALUES (?, ?, ?, uuid())",
-          statementBinder)
-      )
-      .runWith(Sink.seq)
-
-    write.onComplete {
-
-      case Success(s) => println(s)
-
-      case Failure(f) => println("Cannot save record: " + f.toString())
-    }
   }
 }

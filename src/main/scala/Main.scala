@@ -12,64 +12,28 @@ object Main extends App {
 
   val configuration:Configuration = new Configuration()
 
-  private val paymentChecker:ActorRef = createPaymentChecker()
+  private val cassandraConnection:ActorRef = createCassandraConnection()
 
-  //private val paymentReader:ActorRef = createPaymentReader(configuration.sourceFile, paymentChecker)
+  private val paymentChecker:ActorRef = createPaymentChecker(cassandraConnection, configuration)
 
-  private val paymentReader:ActorRef = createPaymentReaderKafkaJson(paymentChecker)
-
-  //private val paymentReader:ActorRef = createPaymentReaderCassandra(configuration.sourceDir, paymentChecker)
-
-  createTransactionRecord()
+  private val paymentReader:ActorRef = createPaymentReaderKafkaJson(paymentChecker, configuration)
 
   paymentReader ! StartReading
 
   case object StartReading
 
-  protected def createPaymentChecker(): ActorRef = {
+  protected def createPaymentChecker(cassandraRef:ActorRef, configuration:Configuration): ActorRef = {
 
-    system.actorOf(PaymentChecker.props())
+    system.actorOf(PaymentChecker.props(cassandraRef, configuration))
   }
 
-  protected def createPaymentReader(source:String, checkerRef:ActorRef): ActorRef = {
+  protected def createPaymentReaderKafkaJson(checkerRef:ActorRef, configuration:Configuration): ActorRef = {
 
-    system.actorOf(PaymentReader.props(source, checkerRef))
+    system.actorOf(PaymentReaderKafkaJson.props(checkerRef, configuration))
   }
 
-  protected def createPaymentReaderKafkaJson(checkerRef:ActorRef): ActorRef = {
+  protected def createCassandraConnection(): ActorRef = {
 
-    system.actorOf(PaymentReaderKafkaJson.props(checkerRef))
-  }
-
-  protected def createPaymentReaderCassandra(directory:String, checkerRef:ActorRef): ActorRef = {
-
-    system.actorOf(PaymentReaderCassandra.props(directory, checkerRef))
-  }
-
-  protected def createTransactionRecord():Unit = {
-
-    val producer:Producer = new Producer()
-
-    val sourceFiles:List[File] = getSourceFiles(Main.configuration.sourceDir)
-
-    for (file <- sourceFiles) {
-
-        val checkFiles:Future[Done] = FileIO.fromPath(file.toPath).map(_.utf8String)
-          .runForeach(i => producer.createTransactionRecord(null, i))
-      }
-  }
-
-  private def getSourceFiles(source:String):List[File] = {
-
-    val sourceDirectory = new File(source)
-
-    if (sourceDirectory.exists && sourceDirectory.isDirectory) {
-
-      sourceDirectory.listFiles.filter(_.isFile).toList
-    }
-    else {
-
-      List[File]()
-    }
+    system.actorOf(CassandraConnection.props())
   }
 }

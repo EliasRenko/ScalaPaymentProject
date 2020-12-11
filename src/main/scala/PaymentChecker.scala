@@ -1,5 +1,12 @@
+import CassandraConnection.SelectParticipants
+import PaymentChecker.{LoadParticipants, Ready}
 import akka.actor.{Actor, ActorLogging, ActorRef, Props}
+import akka.pattern.ask
+import akka.util.Timeout
 
+import scala.concurrent.Await
+import scala.concurrent.duration.DurationInt
+import scala.language.postfixOps
 import scala.util.matching.Regex
 
 object PaymentChecker {
@@ -8,18 +15,37 @@ object PaymentChecker {
 
   case class Payment(sign: PaymentChecker.PaymentSign, value: Long, participant: ActorRef)
 
-  def props(): Props = Props(new PaymentChecker())
+  case class LoadParticipants()
+
+  case class Ready()
+
+  def props(cassandraRef:ActorRef, configuration:Configuration): Props = Props(new PaymentChecker(cassandraRef, configuration))
 }
 
-class PaymentChecker extends Actor with ActorLogging {
+class PaymentChecker(cassandraRef:ActorRef, configuration:Configuration) extends Actor with ActorLogging {
 
   private var participants = Map.empty[String, ActorRef]
 
   private val logIncorrectPayment:ActorRef = createLogIncorrectPayment()
 
-  private val mask:String = Main.configuration.mask
+  private val mask:String = configuration.mask
 
   override def receive: Receive = {
+
+    case LoadParticipants() => {
+
+      implicit val timeout = Timeout(10 seconds)
+
+      val future = cassandraRef ? SelectParticipants
+
+      val result = Await.result(future, timeout.duration).asInstanceOf[List[(String, Float)]]
+
+      result.foreach(i => println(i))
+
+      result.foreach(i => participants += i._1 -> createPaymentParticipant(i._1, i._2.toLong, cassandraRef))
+
+      sender() ! Ready
+    }
 
     case PaymentReader.CheckPayment(i) => {
 
@@ -38,8 +64,6 @@ class PaymentChecker extends Actor with ActorLogging {
       else {
 
         logIncorrectPayment ! PaymentReader.CheckPayment(i)
-
-        //println("Incorrect mask")
       }
     }
 
@@ -58,9 +82,9 @@ class PaymentChecker extends Actor with ActorLogging {
     }
   }
 
-  protected def createPaymentParticipant(name:String, balance:Long): ActorRef = {
+  protected def createPaymentParticipant(name:String, balance:Long, cassandraRef:ActorRef): ActorRef = {
 
-    context.actorOf(PaymentParticipant.props(name, balance))
+    context.actorOf(PaymentParticipant.props(name, balance, cassandraRef))
   }
 
   protected def createLogIncorrectPayment(): ActorRef = {
@@ -72,7 +96,7 @@ class PaymentChecker extends Actor with ActorLogging {
 
     if (!participants.contains(name)) {
 
-      participants += name -> createPaymentParticipant(name, Main.configuration.balance)
+      participants += name -> createPaymentParticipant(name, configuration.balance, cassandraRef)
     }
 
     participants(name)

@@ -1,14 +1,14 @@
 import PaymentChecker.Payment
-import akka.actor.{Actor, ActorLogging, Props}
+import akka.actor.{Actor, ActorLogging, ActorRef, Props}
 
 object PaymentParticipant {
 
   case class StopPayment()
 
-  def props(name:String, balance:Long): Props = Props(new PaymentParticipant(name, balance))
+  def props(name:String, balance:Long, cassandraRef:ActorRef): Props = Props(new PaymentParticipant(name, balance, cassandraRef))
 }
 
-class PaymentParticipant(name:String, var balance:Long) extends Actor with ActorLogging {
+class PaymentParticipant(name:String, var balance:Long, cassandraRef:ActorRef) extends Actor with ActorLogging {
 
   override def receive: Receive = {
 
@@ -20,7 +20,9 @@ class PaymentParticipant(name:String, var balance:Long) extends Actor with Actor
 
           balance += value
 
-          println(name + " + " + balance)
+          saveBalance()
+
+          //println(name + " + " + balance)
         }
 
         case "-" => {
@@ -33,7 +35,9 @@ class PaymentParticipant(name:String, var balance:Long) extends Actor with Actor
 
             log.info("Balance: " + balance.toString)
 
-            println(name + " - " + balance)
+            saveBalance()
+
+            //println(name + " - " + balance)
           }
           else {
 
@@ -66,5 +70,10 @@ class PaymentParticipant(name:String, var balance:Long) extends Actor with Actor
     }
 
     false
+  }
+
+  protected def saveBalance():Unit = {
+
+    cassandraRef ! CassandraConnection.InsertParticipant(name, balance)
   }
 }
